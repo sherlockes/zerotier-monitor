@@ -9,7 +9,11 @@ services:
       - HOME=/home/sherlockes
     volumes:
       - ./data:/app/data
-      - /home/sherlockes/.ssh:/home/sherlockes/.ssh
+      - ~/.ssh:/home/sherlockes/.ssh
+      # Montamos el archivo de configuración directamente.
+      # Al hacer esto, Docker resuelve automáticamente cualquier enlace simbólico
+      # en el host sin importar a dónde apunte, y monta el archivo destino real.
+      - ~/.ssh/config:/home/sherlockes/.ssh/config
     ports:
       - "8081:8080"
     restart: unless-stopped
