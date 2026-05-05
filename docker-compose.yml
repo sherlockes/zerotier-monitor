@@ -1,0 +1,15 @@
+services:
+  zerotier-monitor:
+    build: .
+    container_name: zerotier-monitor
+    user: "1000:1000"
+    env_file: .env
+    environment:
+      - SSH_CONFIG_FILE=/home/sherlockes/.ssh/config
+      - HOME=/home/sherlockes
+    volumes:
+      - ./data:/app/data
+      - /home/sherlockes/.ssh:/home/sherlockes/.ssh
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
