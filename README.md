@@ -7,6 +7,14 @@ Un servicio ligero de monitorización de red basado en Docker que rastrea la dis
 - **Monitorización Multi-Red**: Verifica la conectividad de los hosts en redes locales, ZeroTier, o en ubicaciones remotas.
 - **Notificaciones por Telegram**: Recibe alertas instantáneas en tu dispositivo.
 - **Horarios Flexibles**: Configura qué hosts son "opcionales" o define un horario específico (`8-18`) para evitar alertas de fuera de horario.
+
+### Detalle de Horarios Flexibles
+Dentro del campo "Horario" del editor visual, puedes usar:
+
+- **Rango de horas (`8-18`)**: El host se monitoriza en ese intervalo. Si se apaga fuera de él, no recibes alerta (se marca como *Scheduled*).
+- **`libre` / `opcional` / `ondemand` / `none` / `-`**: El host es opcional. No envía alertas de "OFFLINE", ideal para equipos de uso ocasional.
+- **Vacio / Otros**: Se asume monitorización **24/7**. Alertará en cualquier momento si el equipo cae.
+
 - **Dashboard Web**: Interfaz clara con Flask para visualizar y ordenar todos tus nodos.
 - **Editor Visual SSH**: Gestiona tus configuraciones desde un editor estructurado con tabla CRUD en la web (adiós a editar texto plano).
 - **Escáner/Descubrimiento**: Escanea las diferentes subredes para añadir nuevos dispositivos fácilmente a la monitorización.
@@ -33,7 +41,7 @@ A continuación se detalla el propósito de cada parámetro dentro del archivo `
 
 ### Notificaciones de Telegram
 - `TELEGRAM_BOT_TOKEN`: Token de tu bot de Telegram.
-- `TELEGRAM_CHAT_ID`: ID del chat/grupo donde el bot enviará las notificaciones.
+- `TELEGRAM_CHAT_ID`: ID del chat/grupo donde el bot enviará las notificaciones (No olvides el guión - en caso de ser un chat/grupo, por ejemplo: `-123456789`).  
 
 ### Red Remota (Jump Host)
 - `JUMP_HOST_IP`: Dirección IP de la máquina (Jump Host) usada para monitorizar nodos de la red remota mediante SSH.

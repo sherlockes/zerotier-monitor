@@ -63,10 +63,12 @@ def send_telegram(msg: str):
     except Exception as e:
         print(f"[ZT-MONITOR] Error enviando Telegram: {e}", flush=True)
 
+ON_DEMAND_VALUES = ["none", "-", "libre", "opcional", "ondemand"]
+
 def is_within_schedule(horario_str, current_hour):
     if not horario_str:
         return True
-    if horario_str.strip().lower() in ["none", "-", "libre", "opcional", "ondemand"]:
+    if horario_str.strip().lower() in ON_DEMAND_VALUES:
         return False
     try:
         start, end = map(int, horario_str.split("-"))
@@ -371,7 +373,10 @@ def monitor_thread():
                         if scheduled_online and NOTIFY_ONLINE:
                             alerts.append(f"🟢 INFO: {name} ({ip or ''}) vuelve a estar ONLINE.")
                         elif not scheduled_online and NOTIFY_OFF_SCHEDULE:
-                            alerts.append(f"⚠️ ATENCIÓN: {name} ({ip or ''}) se ha conectado FUERA DE HORARIO ({h['horario']}).")
+                            if h["horario"].strip().lower() in ON_DEMAND_VALUES:
+                                alerts.append(f"ℹ️ INFO: {name} ({ip or ''}) se ha conectado.")
+                            else:
+                                alerts.append(f"⚠️ ATENCIÓN: {name} ({ip or ''}) se ha conectado FUERA DE HORARIO ({h['horario']}).")
             
             global_hosts_state = hosts
             global_last_update = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
