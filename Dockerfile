@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 # Herramientas esenciales para monitorización y depuración
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    procps curl fping openssh-client nmap arp-scan && \
+    procps curl fping openssh-client nmap arp-scan tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
