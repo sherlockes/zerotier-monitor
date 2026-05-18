@@ -79,6 +79,17 @@ def is_within_schedule(horario_str, current_hour):
     except:
         return True
 
+def is_courtesy_period(horario_str, now):
+    if not horario_str:
+        return False
+    if horario_str.strip().lower() in ON_DEMAND_VALUES:
+        return False
+    try:
+        start, end = map(int, horario_str.split("-"))
+        return now.hour == start and now.minute < 5
+    except:
+        return False
+
 def get_network(name, ip):
     if name.endswith("z") or (ip and ip.startswith("192.168.191.")):
         return "ZeroTier"
@@ -312,7 +323,8 @@ def monitor_thread():
                     alerts.append("✅ INFO: La API de ZeroTier vuelve a estar operativa.")
                 api_error_sent = False
                 
-            current_hour = datetime.now().hour
+            now = datetime.now()
+            current_hour = now.hour
             
             config_names = {h["name"] for h in hosts}
             config_ips = {h["ip"] for h in hosts if h.get("ip")}
@@ -355,11 +367,15 @@ def monitor_thread():
                         is_online = check_local(ip)
                         
                 scheduled_online = is_within_schedule(h["horario"], current_hour)
+                courtesy_active = is_courtesy_period(h["horario"], now)
                 
                 if is_online:
                     status = "ONLINE"
                 else:
-                    status = "OFFLINE" if scheduled_online else "OFFLINE (Scheduled)"
+                    if scheduled_online:
+                        status = "OFFLINE (Cortesía)" if courtesy_active else "OFFLINE"
+                    else:
+                        status = "OFFLINE (Scheduled)"
                     
                 h["status"] = status
                 new_state[name] = status
@@ -413,6 +429,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         tr.ONLINE td { background-color: #122818; color: #4CAF50; font-weight: bold; }
         tr.OFFLINE td { background-color: #331111; color: #F44336; font-weight: bold; }
         tr.OFFLINE_SCHEDULED td { background-color: #1a1a1a; color: #777; font-weight: bold; }
+        tr.OFFLINE_COURTESY td { background-color: #2b1f11; color: #ff9800; font-weight: bold; }
         .footer { margin-top: 15px; font-size: 0.9em; color: #aaa; }
         .btn { padding: 10px 15px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
         .btn:hover { background: #45a049; }
@@ -459,7 +476,7 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         </thead>
         <tbody>
             {% for h in hosts %}
-            <tr class="{{ h.status.replace(' (Scheduled)', '_SCHEDULED') }}">
+            <tr class="{{ h.status.replace(' (Scheduled)', '_SCHEDULED').replace(' (Cortesía)', '_COURTESY') }}">
                 <td>{{ h.name }}</td>
                 <td class="hide-mobile">{{ h.description }}</td>
                 <td>{{ h.ip or '-' }}</td>
@@ -807,6 +824,8 @@ def index():
         status = h.get("status", "")
         if status == "OFFLINE":
             prio = 1
+        elif status == "OFFLINE (Cortesía)":
+            prio = 1.5
         elif status == "ONLINE":
             prio = 2
         else:
