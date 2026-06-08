@@ -11,12 +11,14 @@ services:
     volumes:
       - ./data:/app/data
       - ~/.ssh:/home/sherlockes/.ssh
-      # Montamos el archivo de configuración directamente.
-      # Al hacer esto, Docker resuelve automáticamente cualquier enlace simbólico
-      # en el host sin importar a dónde apunte, y monta el archivo destino real.
       - ~/.ssh/config:/home/sherlockes/.ssh/config
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-    ports:
-      - "8081:8080"
+    # Quitamos "ports" para que no sea accesible públicamente por el puerto 8081
+    networks:
+      - proxy
     restart: unless-stopped
+
+networks:
+  proxy:
+    external: true

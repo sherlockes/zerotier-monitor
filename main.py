@@ -16,6 +16,9 @@ TELEGRAM_CHAT = os.getenv("TELEGRAM_CHAT_ID")
 JUMP_HOST_IP = os.getenv("JUMP_HOST_IP")
 JUMP_HOST_USER = os.getenv("JUMP_HOST_USER")
 
+JUMP_HOST_10_IP = os.getenv("JUMP_HOST_10_IP")
+JUMP_HOST_10_USER = os.getenv("JUMP_HOST_10_USER")
+
 WEB_USER = os.getenv("WEB_USER", "admin")
 WEB_PASS = os.getenv("WEB_PASSWORD", "")
 
@@ -97,7 +100,7 @@ def get_network(name, ip):
         return "Local"
     if ip and ip.startswith("192.168.1."):
         return "Remota"
-    return "Desconocida"
+    return "Pública"
 
 # ───────────────── PARSER ─────────────────
 
@@ -180,18 +183,18 @@ def check_local(ip):
     except:
         return False
 
-def check_remote(ip):
-    if not JUMP_HOST_IP or not JUMP_HOST_USER:
-        print(f"[ZT-MONITOR] Remote check skipped for {ip}: Missing JUMP_HOST_IP or JUMP_HOST_USER.", flush=True)
+def check_remote(ip, jump_host, jump_user):
+    if not jump_host or not jump_user:
+        print(f"[ZT-MONITOR] Remote check skipped for {ip}: Missing jump host configuration.", flush=True)
         return False
     try:
-        cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", f"{JUMP_HOST_USER}@{JUMP_HOST_IP}", f"ping -c 1 -W 1 {ip}"]
+        cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", f"{jump_user}@{jump_host}", f"ping -c 1 -W 1 {ip}"]
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0:
-            print(f"[ZT-MONITOR] check_remote failed for {ip}. RC: {res.returncode}, STDERR: {res.stderr.strip()}", flush=True)
+            print(f"[ZT-MONITOR] check_remote failed for {ip} via {jump_host}. RC: {res.returncode}, STDERR: {res.stderr.strip()}", flush=True)
         return res.returncode == 0
     except Exception as e:
-        print(f"[ZT-MONITOR] Exception in check_remote for {ip}: {e}", flush=True)
+        print(f"[ZT-MONITOR] Exception in check_remote for {ip} via {jump_host}: {e}", flush=True)
         return False
 
 # ───────────────── NETWORK SCANNER ─────────────────
@@ -265,11 +268,20 @@ def scan_networks():
             commit_host()
 
     # 2. Local (192.168.10.0/24)
-    try:
-        res = subprocess.run(["nmap", "-sn", "192.168.10.0/24"], capture_output=True, text=True, timeout=30)
-        parse_nmap_or_fping(res.stdout, "Local", "Local")
-    except Exception as e:
-        print(f"[ZT-MONITOR] Error escaneando red Local con nmap: {e}")
+    if JUMP_HOST_10_IP and JUMP_HOST_10_USER:
+        try:
+            cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", 
+                   f"{JUMP_HOST_10_USER}@{JUMP_HOST_10_IP}", "nmap -sn 192.168.10.0/24 2>/dev/null || fping -a -g 192.168.10.0/24 2>/dev/null"]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=40)
+            parse_nmap_or_fping(res.stdout, "Local", "Local")
+        except Exception as e:
+            print(f"[ZT-MONITOR] Error escaneando red Local via Jump Host: {e}")
+    else:
+        try:
+            res = subprocess.run(["nmap", "-sn", "192.168.10.0/24"], capture_output=True, text=True, timeout=30)
+            parse_nmap_or_fping(res.stdout, "Local", "Local")
+        except Exception as e:
+            print(f"[ZT-MONITOR] Error escaneando red Local con nmap: {e}")
 
     # 3. Remota (192.168.1.0/24)
     if JUMP_HOST_IP and JUMP_HOST_USER:
@@ -355,13 +367,13 @@ def monitor_thread():
                 is_online = False
                 
                 if net == "Local" and ip:
-                    is_online = check_local(ip)
+                    is_online = check_remote(ip, JUMP_HOST_10_IP, JUMP_HOST_10_USER)
                 elif "ZeroTier" in net:
                     zt_node = zt_nodes.get(ip) or zt_nodes.get(name)
                     if zt_node:
                         is_online = zt_node["is_online"]
                 elif net == "Remota" and ip:
-                    is_online = check_remote(ip)
+                    is_online = check_remote(ip, JUMP_HOST_IP, JUMP_HOST_USER)
                 else:
                     if ip:
                         is_online = check_local(ip)
