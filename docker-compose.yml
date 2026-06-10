@@ -10,7 +10,8 @@ services:
       - TZ=Europe/Madrid
     volumes:
       - ./data:/app/data
-      - ~/.ssh:/home/sherlockes/.ssh
+      - ~/.ssh/id_ed25519:/home/sherlockes/.ssh/id_ed25519
+      - ~/.ssh/known_hosts:/home/sherlockes/.ssh/known_hosts
       - ~/.ssh/config:/home/sherlockes/.ssh/config
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
